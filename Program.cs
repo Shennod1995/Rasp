@@ -15,9 +15,9 @@ namespace PaymentSystems
 
             Order order = new Order(1234, 1200);
 
-            Console.WriteLine(new MD5Id().GetPayingLink(order));
-            Console.WriteLine(new MD5IdAndAmount().GetPayingLink(order));
-            Console.WriteLine(new SHA1IdAndAmountAndKey().GetPayingLink(order));
+            Console.WriteLine(new SystemMD5SingleValue().GetPayingLink(order));
+            Console.WriteLine(new SystemMD5CombineValues().GetPayingLink(order));
+            Console.WriteLine(new SystemSHA1CombineValues().GetPayingLink(order));
         }
     }
 
@@ -34,15 +34,15 @@ namespace PaymentSystems
         public string GetPayingLink(Order order);
     }
 
-    public interface IReadOnlyPaymentSystems
+    public interface IReadOnlyEncodingHashSystems
     {
-        public string HashMD5(string message);
-        public string HashSHA1(string message);
+        public string GetEncodingHashMD5(string message);
+        public string GetEncodingHashSHA1(string message);
     }
 
-    class PaymentSystems : IReadOnlyPaymentSystems
+    class EncodingHashSystems : IReadOnlyEncodingHashSystems
     {
-        public string HashMD5(string message)
+        public string GetEncodingHashMD5(string message)
         {
             using MD5 md5 = MD5.Create();
 
@@ -52,7 +52,7 @@ namespace PaymentSystems
             return GetHashString(hash);
         }
 
-        public string HashSHA1(string message)
+        public string GetEncodingHashSHA1(string message)
         {
             using SHA1 sha1 = SHA1.Create();
 
@@ -75,9 +75,9 @@ namespace PaymentSystems
         }
     }
 
-    class MD5Id : IPaymentSystem
+    class SystemMD5SingleValue : IPaymentSystem
     {
-        private readonly IReadOnlyPaymentSystems _paymentSystem = new PaymentSystems();
+        private readonly IReadOnlyEncodingHashSystems _paymentSystem = new EncodingHashSystems();
 
         public string GetPayingLink(Order order)
         {
@@ -86,13 +86,15 @@ namespace PaymentSystems
                 throw new ArgumentNullException(nameof(order));
             }
 
-            return _paymentSystem.HashMD5(order.Id.ToString());
+            string id = order.Id.ToString();
+
+            return _paymentSystem.GetEncodingHashMD5(id);
         }
     }
 
-    class MD5IdAndAmount : IPaymentSystem
+    class SystemMD5CombineValues : IPaymentSystem
     {
-        private readonly IReadOnlyPaymentSystems _paymentSystem = new PaymentSystems();
+        private readonly IReadOnlyEncodingHashSystems _paymentSystem = new EncodingHashSystems();
 
         public string GetPayingLink(Order order)
         {
@@ -104,14 +106,15 @@ namespace PaymentSystems
             string id = order.Id.ToString();
             string amount = order.Amount.ToString();
 
-            return _paymentSystem.HashMD5(id + amount);
+            return _paymentSystem.GetEncodingHashMD5(id + amount);
         }
     }
 
-    class SHA1IdAndAmountAndKey : IPaymentSystem
+    class SystemSHA1CombineValues : IPaymentSystem
     {
-        private readonly IReadOnlyPaymentSystems _paymentSystem = new PaymentSystems();
+        private readonly IReadOnlyEncodingHashSystems _paymentSystem = new EncodingHashSystems();
         private readonly string _secretKey = "123";
+
         public string GetPayingLink(Order order)
         {
             if (order == null)
@@ -122,7 +125,7 @@ namespace PaymentSystems
             string id = order.Id.ToString();
             string amount = order.Amount.ToString();
 
-            return _paymentSystem.HashSHA1(id + amount + _secretKey);
+            return _paymentSystem.GetEncodingHashSHA1(id + amount + _secretKey);
         }
     }
 }
